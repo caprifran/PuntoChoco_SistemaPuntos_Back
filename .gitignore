@@ -1,0 +1,60 @@
+# ========================
+# Java / Maven
+# ========================
+backend/target/
+*.class
+*.jar
+*.war
+*.ear
+!.mvn/wrapper/maven-wrapper.jar
+
+# Maven wrapper
+.mvn/wrapper/maven-wrapper.jar
+
+# Logs
+*.log
+hs_err_pid*
+replay_pid*
+
+# ========================
+# Spring Boot
+# ========================
+backend/src/main/resources/application-local.properties
+backend/src/main/resources/application-dev.properties
+
+# ========================
+# Docker
+# ========================
+*.env
+.env.*
+docker-compose.override.yml
+/backups/
+
+# ========================
+# IDE / Editor
+# ========================
+.vscode/
+.idea/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+*.swp
+*~
+.factorypath
+
+# ========================
+# OS
+# ========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+# ========================
+# Others  
+# ========================
+levantar_proyecto.bat
+restauracion-bd.bat
