@@ -3,6 +3,7 @@ package com.puntochoco.config;
 import com.puntochoco.security.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -26,9 +27,15 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final Environment environment;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, Environment environment) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.environment = environment;
+    }
+
+    private boolean isDevelop() {
+        return java.util.Arrays.asList(environment.getActiveProfiles()).contains("develop");
     }
 
     @Bean
@@ -37,16 +44,24 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/health/**").permitAll()
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
-                .requestMatchers("/api/clientes/**").hasAnyRole("ADMIN", "SELLER")
-                .requestMatchers("/api/productos/**").hasAnyRole("ADMIN", "SELLER")
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .authorizeHttpRequests(auth -> {
+                auth.requestMatchers("/api/auth/**").permitAll()
+                    .requestMatchers("/api/health/**").permitAll();
+                if (isDevelop()) {
+                    auth.requestMatchers("/h2-console/**").permitAll();
+                }
+                auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
+                    .requestMatchers("/api/clientes/**").hasAnyRole("ADMIN", "SELLER")
+                    .requestMatchers("/api/productos/**").hasAnyRole("ADMIN", "SELLER")
+                    .anyRequest().authenticated();
+            });
+
+        if (isDevelop()) {
+            http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
+        }
+
+        http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
