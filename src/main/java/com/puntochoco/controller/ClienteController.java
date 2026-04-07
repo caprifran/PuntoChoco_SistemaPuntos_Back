@@ -5,6 +5,7 @@ import com.puntochoco.model.Movimiento;
 import com.puntochoco.service.ClienteService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -35,9 +36,11 @@ public class ClienteController {
     public ResponseEntity<?> getHistorico(
             @RequestParam(required = false) Long clienteId,
             @RequestParam(required = false) String fDesde,
-            @RequestParam(required = false) String fHasta) {
+            @RequestParam(required = false) String fHasta,
+            @RequestParam(required = false) String tipo,
+            @RequestParam(required = false) String clienteDesc) {
         try {
-            List<Map<String, Object>> resultado = clienteService.obtenerMovimientos(clienteId, fDesde, fHasta);
+            List<Map<String, Object>> resultado = clienteService.obtenerMovimientos(clienteId, fDesde, fHasta, tipo, clienteDesc);
             if (resultado.isEmpty()) {
                 return ResponseEntity.ok(List.of());
             }
@@ -90,10 +93,11 @@ public class ClienteController {
     }
 
     @PutMapping("/{id}/agregarPuntos")
-    public ResponseEntity<?> agregarPuntos(@PathVariable Long id, @RequestBody Map<String, Integer> body) {
+    public ResponseEntity<?> agregarPuntos(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         try {
-            int puntos = body.getOrDefault("puntos", 0);
-            Movimiento mov = clienteService.agregarPuntos(id, puntos);
+            int puntos = (int) body.getOrDefault("puntos", 0);
+            String nroFactura = (String) body.getOrDefault("nroFactura", "");
+            Movimiento mov = clienteService.agregarPuntos(id, puntos, nroFactura);
             return ResponseEntity.ok(mov);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -108,5 +112,15 @@ public class ClienteController {
         int cantProd = Integer.parseInt(body.get("cantProd").toString());
         Object result = clienteService.descontarPuntos(id, idProducto, cantProd);
         return ResponseEntity.ok(result);
+    }
+
+    @PutMapping("/historico/{id}/baja")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> bajaMovimiento(@PathVariable Long id) {
+        boolean eliminado = clienteService.bajaMovimiento(id);
+        if (!eliminado) {
+            return ResponseEntity.status(404).body(Map.of("msg", "Movimiento no encontrado o ya dado de baja"));
+        }
+        return ResponseEntity.ok(Map.of("msg", "Movimiento dado de baja"));
     }
 }

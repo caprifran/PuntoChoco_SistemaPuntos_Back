@@ -34,6 +34,11 @@ public class Movimiento {
     @Column(length = 1000)
     private String detalle;
 
+    private LocalDateTime fechaBaja;
+
+    @Column(unique = true)
+    private String nroFactura;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "clienteId", nullable = false)
     @JsonIgnore
