@@ -38,9 +38,10 @@ public class ClienteController {
             @RequestParam(required = false) String fDesde,
             @RequestParam(required = false) String fHasta,
             @RequestParam(required = false) String tipo,
-            @RequestParam(required = false) String clienteDesc) {
+            @RequestParam(required = false) String clienteDesc,
+            @RequestParam(required = false) String nroFactura) {
         try {
-            List<Map<String, Object>> resultado = clienteService.obtenerMovimientos(clienteId, fDesde, fHasta, tipo, clienteDesc);
+            List<Map<String, Object>> resultado = clienteService.obtenerMovimientos(clienteId, fDesde, fHasta, tipo, clienteDesc, nroFactura);
             if (resultado.isEmpty()) {
                 return ResponseEntity.ok(List.of());
             }
