@@ -4,9 +4,13 @@ import com.puntochoco.model.Cliente;
 import com.puntochoco.model.Producto;
 import com.puntochoco.model.Rol;
 import com.puntochoco.model.Usuario;
+import com.puntochoco.model.Movimiento;
 import com.puntochoco.repository.ClienteRepository;
+import com.puntochoco.repository.MovimientoRepository;
 import com.puntochoco.repository.ProductoRepository;
 import com.puntochoco.repository.UsuarioRepository;
+
+import java.time.LocalDateTime;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,15 +23,18 @@ public class DataLoader implements CommandLineRunner {
     private final UsuarioRepository usuarioRepository;
     private final ClienteRepository clienteRepository;
     private final ProductoRepository productoRepository;
+    private final MovimientoRepository movimientoRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DataLoader(UsuarioRepository usuarioRepository,
                       ClienteRepository clienteRepository,
                       ProductoRepository productoRepository,
+                      MovimientoRepository movimientoRepository,
                       PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.clienteRepository = clienteRepository;
         this.productoRepository = productoRepository;
+        this.movimientoRepository = movimientoRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -36,6 +43,7 @@ public class DataLoader implements CommandLineRunner {
         cargarUsuarios();
         cargarClientes();
         cargarProductos();
+        cargarMovimientos();
     }
 
     private void cargarUsuarios() {
@@ -109,5 +117,30 @@ public class DataLoader implements CommandLineRunner {
             p.setPrecio((Integer) d[1]);
             productoRepository.save(p);
         }
+    }
+
+    private void cargarMovimientos() {
+        if (movimientoRepository.count() > 0) return;
+
+        Cliente carlos = clienteRepository.findByDniAndFechaBajaIsNull("30123456").orElse(null);
+        if (carlos == null) return;
+
+        LocalDateTime ahora = LocalDateTime.now();
+
+        Movimiento alta = new Movimiento();
+        alta.setTipo("alta");
+        alta.setPuntos(1000);
+        alta.setFecha(ahora);
+        alta.setVencimiento(ahora.plusMonths(6));
+        alta.setCliente(carlos);
+        movimientoRepository.save(alta);
+
+        Movimiento consumo = new Movimiento();
+        consumo.setTipo("consumo");
+        consumo.setPuntos(-500);
+        consumo.setFecha(ahora);
+        consumo.setDetalle("Caja de Bombones x12 X1");
+        consumo.setCliente(carlos);
+        movimientoRepository.save(consumo);
     }
 }
