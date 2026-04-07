@@ -96,7 +96,7 @@ public class ClienteService {
         return true;
     }
 
-    public Movimiento agregarPuntos(Long clienteId, int puntos) {
+    public Movimiento agregarPuntos(Long clienteId, int puntos, String nroFactura) {
         if (puntos <= 0) {
             throw new IllegalArgumentException("Los puntos deben ser un número positivo y entero");
         }
@@ -114,6 +114,7 @@ public class ClienteService {
         mov.setFecha(LocalDateTime.now());
         mov.setVencimiento(vencimiento);
         mov.setCliente(opt.get());
+        mov.setNroFactura(nroFactura);
         return movimientoRepository.save(mov);
     }
 
@@ -144,20 +145,13 @@ public class ClienteService {
         return movimientoRepository.save(mov);
     }
 
-    public List<Map<String, Object>> obtenerMovimientos(Long clienteId, String fDesde, String fHasta) {
+    public List<Map<String, Object>> obtenerMovimientos(Long clienteId, String fDesde, String fHasta, String tipo, String clienteDesc) {
         LocalDateTime desde = (fDesde != null && !fDesde.isBlank()) ? LocalDate.parse(fDesde.substring(0, 10)).atStartOfDay() : null;
         LocalDateTime hasta = (fHasta != null && !fHasta.isBlank()) ? LocalDate.parse(fHasta.substring(0, 10)).plusDays(1).atStartOfDay() : null;
-
-        List<Movimiento> movimientos;
-        if (desde != null && hasta != null) {
-            movimientos = movimientoRepository.findHistoricoEntreFechas(clienteId, desde, hasta);
-        } else if (desde != null) {
-            movimientos = movimientoRepository.findHistoricoDesde(clienteId, desde);
-        } else if (hasta != null) {
-            movimientos = movimientoRepository.findHistoricoHasta(clienteId, hasta);
-        } else {
-            movimientos = movimientoRepository.findHistoricoSinFechas(clienteId);
-        }
+        String tipoFiltro = (tipo != null && !tipo.isBlank()) ? tipo.toLowerCase() : null;
+        String clienteDescFiltro = (clienteDesc != null && !clienteDesc.isBlank()) ? clienteDesc.toLowerCase() : null;
+        
+        List<Movimiento> movimientos = movimientoRepository.findHistorico(clienteId, desde, hasta, tipoFiltro, clienteDescFiltro);
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (Movimiento m : movimientos) {
@@ -174,6 +168,7 @@ public class ClienteService {
                 map.put("clienteCompleto", c.getApellido() + ", " + c.getNombre());
                 map.put("DNI", c.getDni());
             }
+            map.put("nroFactura", m.getNroFactura());
             result.add(map);
         }
         return result;
@@ -197,5 +192,17 @@ public class ClienteService {
             result.add(map);
         }
         return result;
+    }
+
+    public boolean bajaMovimiento(Long id) {
+        Optional<Movimiento> opt = movimientoRepository.findById(id);
+        if (opt.isEmpty()) return false;
+
+        Movimiento mov = opt.get();
+        if (mov.getFechaBaja() != null) return false;
+
+        mov.setFechaBaja(LocalDateTime.now());
+        movimientoRepository.save(mov);
+        return true;
     }
 }
