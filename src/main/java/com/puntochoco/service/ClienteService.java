@@ -4,6 +4,10 @@ import com.puntochoco.model.Cliente;
 import com.puntochoco.model.Movimiento;
 import com.puntochoco.repository.ClienteRepository;
 import com.puntochoco.repository.MovimientoRepository;
+
+import com.puntochoco.specification.MovimientoSpecification;
+import org.springframework.data.jpa.domain.Specification;
+
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -144,18 +148,32 @@ public class ClienteService {
         mov.setDetalle(producto.getDescripcion() + " X" + cantidad);
         return movimientoRepository.save(mov);
     }
+    
+    public List<Map<String, Object>> obtenerMovimientos(
+            Long clienteId, String fDesde, String fHasta, String tipo, String clienteDesc) {
 
-    public List<Map<String, Object>> obtenerMovimientos(Long clienteId, String fDesde, String fHasta, String tipo, String clienteDesc) {
-        LocalDateTime desde = (fDesde != null && !fDesde.isBlank()) ? LocalDate.parse(fDesde.substring(0, 10)).atStartOfDay() : null;
-        LocalDateTime hasta = (fHasta != null && !fHasta.isBlank()) ? LocalDate.parse(fHasta.substring(0, 10)).plusDays(1).atStartOfDay() : null;
+        LocalDateTime desde = (fDesde != null && !fDesde.isBlank())
+                ? LocalDate.parse(fDesde.substring(0, 10)).atStartOfDay()
+                : null;
+
+        LocalDateTime hasta = (fHasta != null && !fHasta.isBlank())
+                ? LocalDate.parse(fHasta.substring(0, 10)).plusDays(1).atStartOfDay()
+                : null;
+
         String tipoFiltro = (tipo != null && !tipo.isBlank()) ? tipo.toLowerCase() : null;
-        String clienteDescFiltro = (clienteDesc != null && !clienteDesc.isBlank()) ? clienteDesc.toLowerCase() : null;
-        
-        List<Movimiento> movimientos = movimientoRepository.findHistorico(clienteId, desde, hasta, tipoFiltro, clienteDescFiltro);
+        String clienteDescFiltro = (clienteDesc != null && !clienteDesc.isBlank()) ? clienteDesc : null;
+
+        Specification<Movimiento> spec = MovimientoSpecification.conFiltros(
+                clienteId, desde, hasta, tipoFiltro, clienteDescFiltro
+        );
+
+        List<Movimiento> movimientos = movimientoRepository.findAll(spec);
 
         List<Map<String, Object>> result = new ArrayList<>();
+
         for (Movimiento m : movimientos) {
             Map<String, Object> map = new LinkedHashMap<>();
+
             map.put("id", m.getId());
             map.put("tipo", m.getTipo());
             map.put("puntos", m.getPuntos());
@@ -163,14 +181,18 @@ public class ClienteService {
             map.put("vencimiento", m.getVencimiento());
             map.put("detalle", m.getDetalle());
             map.put("clienteId", m.getClienteId());
+
             if (clienteId == null) {
                 Cliente c = m.getCliente();
                 map.put("clienteCompleto", c.getApellido() + ", " + c.getNombre());
                 map.put("DNI", c.getDni());
             }
+
             map.put("nroFactura", m.getNroFactura());
+
             result.add(map);
         }
+
         return result;
     }
 
