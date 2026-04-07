@@ -17,7 +17,8 @@ public class MovimientoSpecification {
             LocalDateTime desde,
             LocalDateTime hasta,
             String tipo,
-            String clienteDesc
+            String clienteDesc,
+            String nroFactura
     ) {
         return (root, query, cb) -> {
 
@@ -54,6 +55,11 @@ public class MovimientoSpecification {
                 Predicate apellido = cb.like(cb.lower(cliente.get("apellido")), like);
 
                 predicates.add(cb.or(nombre, apellido));
+            }
+
+            if (nroFactura != null) {
+                Predicate facturaLike = cb.like(cb.lower(root.get("nroFactura")), "%" + nroFactura.toLowerCase() + "%");
+                predicates.add(facturaLike);
             }
 
             query.orderBy(cb.desc(root.get("fecha")));

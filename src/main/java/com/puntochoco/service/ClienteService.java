@@ -154,7 +154,7 @@ public class ClienteService {
     }
     
     public List<Map<String, Object>> obtenerMovimientos(
-            Long clienteId, String fDesde, String fHasta, String tipo, String clienteDesc) {
+            Long clienteId, String fDesde, String fHasta, String tipo, String clienteDesc, String nroFactura) {
 
         LocalDateTime desde = (fDesde != null && !fDesde.isBlank())
                 ? LocalDate.parse(fDesde.substring(0, 10)).atStartOfDay()
@@ -168,7 +168,7 @@ public class ClienteService {
         String clienteDescFiltro = (clienteDesc != null && !clienteDesc.isBlank()) ? clienteDesc : null;
 
         Specification<Movimiento> spec = MovimientoSpecification.conFiltros(
-                clienteId, desde, hasta, tipoFiltro, clienteDescFiltro
+                clienteId, desde, hasta, tipoFiltro, clienteDescFiltro, nroFactura
         );
 
         List<Movimiento> movimientos = movimientoRepository.findAll(spec);
