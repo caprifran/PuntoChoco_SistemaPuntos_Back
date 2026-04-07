@@ -11,6 +11,8 @@ import java.util.List;
 
 public interface MovimientoRepository extends JpaRepository<Movimiento, Long>, JpaSpecificationExecutor<Movimiento> {
 
+    boolean existsByNroFactura(String nroFactura);
+
     @Query("SELECT COALESCE(SUM(m.puntos), 0) FROM Movimiento m " +
            "WHERE m.cliente.id = :clienteId " +
            "AND m.fechaBaja IS NULL " +

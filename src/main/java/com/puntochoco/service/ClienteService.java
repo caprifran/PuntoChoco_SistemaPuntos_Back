@@ -105,6 +105,10 @@ public class ClienteService {
             throw new IllegalArgumentException("Los puntos deben ser un número positivo y entero");
         }
 
+        if (nroFactura != null && !nroFactura.isBlank() && movimientoRepository.existsByNroFactura(nroFactura)) {
+            throw new IllegalArgumentException("Ya existe un movimiento con el número de factura: " + nroFactura);
+        }
+
         Optional<Cliente> opt = clienteRepository.findById(clienteId);
         if (opt.isEmpty()) {
             throw new NoSuchElementException("Cliente no encontrado");
