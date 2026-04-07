@@ -22,10 +22,18 @@ public class MovimientoSpecification {
     ) {
         return (root, query, cb) -> {
 
-            root.fetch("cliente", JoinType.INNER);
-            query.distinct(true);
-
-            Join<Movimiento, Cliente> cliente = root.join("cliente");
+            /*
+            El cast (Join<Movimiento, Cliente>) (Join) pasa primero por el tipo raw Join (que el compilador acepta) y luego al genérico. 
+            El @SuppressWarnings("unchecked") suprime el warning esperado. 
+            En runtime Hibernate devuelve un objeto que implementa ambas interfaces, así que funciona correctamente.
+            */
+            @SuppressWarnings("unchecked")
+            Join<Movimiento, Cliente> cliente;
+            if (Long.class != query.getResultType()) {
+                cliente = (Join<Movimiento, Cliente>) (Join) root.fetch("cliente", JoinType.INNER);
+            } else {
+                cliente = root.join("cliente", JoinType.INNER);
+            }
 
             List<Predicate> predicates = new ArrayList<>();
 
@@ -58,8 +66,7 @@ public class MovimientoSpecification {
             }
 
             if (nroFactura != null) {
-                Predicate facturaLike = cb.like(cb.lower(root.get("nroFactura")), "%" + nroFactura.toLowerCase() + "%");
-                predicates.add(facturaLike);
+                predicates.add(cb.like(cb.lower(root.get("nroFactura")), "%" + nroFactura.toLowerCase() + "%"));
             }
 
             query.orderBy(cb.desc(root.get("fecha")));
