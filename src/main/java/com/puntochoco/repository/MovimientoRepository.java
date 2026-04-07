@@ -2,35 +2,20 @@ package com.puntochoco.repository;
 
 import com.puntochoco.model.Movimiento;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
+public interface MovimientoRepository extends JpaRepository<Movimiento, Long>, JpaSpecificationExecutor<Movimiento> {
 
     @Query("SELECT COALESCE(SUM(m.puntos), 0) FROM Movimiento m " +
            "WHERE m.cliente.id = :clienteId " +
            "AND m.fechaBaja IS NULL " +
            "AND (m.tipo = 'consumo' OR (m.tipo = 'alta' AND m.vencimiento > :ahora))")
     Long sumPuntosVigentes(@Param("clienteId") Long clienteId, @Param("ahora") LocalDateTime ahora);
-
-    @Query("SELECT m FROM Movimiento m JOIN FETCH m.cliente c " +
-           "WHERE c.fechaBaja IS NULL " +
-           "AND m.fechaBaja IS NULL " +
-           "AND (:clienteId IS NULL OR c.id = :clienteId) " +
-           "AND (:fDesde IS NULL OR m.fecha >= :fDesde) " +
-           "AND (:fHasta IS NULL OR m.fecha < :fHasta) " +
-           "AND (:tipo IS NULL OR m.tipo = :tipo) " +
-           "AND (:clienteDesc IS NULL OR (LOWER(c.nombre) LIKE CONCAT('%', :clienteDesc, '%') OR LOWER(c.apellido) LIKE CONCAT('%', :clienteDesc, '%'))) " +
-           "ORDER BY m.fecha DESC")
-    List<Movimiento> findHistorico(
-            @Param("clienteId") Long clienteId,
-            @Param("fDesde") LocalDateTime fDesde,
-            @Param("fHasta") LocalDateTime fHasta,
-            @Param("tipo") String tipo,
-            @Param("clienteDesc") String clienteDesc);
 
     @Query(value = "SELECT c.id, CONCAT(c.apellido, ', ', c.nombre) AS cliente, c.dni, " +
            "SUM(m.puntos) * -1 AS puntos " +
