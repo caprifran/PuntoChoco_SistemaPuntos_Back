@@ -1,6 +1,7 @@
 package com.puntochoco.config;
 
 import com.puntochoco.security.JwtAuthFilter;
+import com.puntochoco.security.RateLimitFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -27,10 +28,12 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final RateLimitFilter rateLimitFilter;
     private final Environment environment;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter, Environment environment) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, RateLimitFilter rateLimitFilter, Environment environment) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.rateLimitFilter = rateLimitFilter;
         this.environment = environment;
     }
 
@@ -61,6 +64,7 @@ public class SecurityConfig {
             http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
         }
 
+        http.addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
