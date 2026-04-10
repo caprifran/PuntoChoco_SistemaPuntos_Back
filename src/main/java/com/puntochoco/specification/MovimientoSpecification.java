@@ -18,15 +18,16 @@ public class MovimientoSpecification {
             LocalDateTime hasta,
             String tipo,
             String clienteDesc,
-            String nroFactura
-    ) {
+            String nroFactura) {
         return (root, query, cb) -> {
 
             /*
-            El cast (Join<Movimiento, Cliente>) (Join) pasa primero por el tipo raw Join (que el compilador acepta) y luego al genérico. 
-            El @SuppressWarnings("unchecked") suprime el warning esperado. 
-            En runtime Hibernate devuelve un objeto que implementa ambas interfaces, así que funciona correctamente.
-            */
+             * El cast (Join<Movimiento, Cliente>) (Join) pasa primero por el tipo raw Join
+             * (que el compilador acepta) y luego al genérico.
+             * El @SuppressWarnings("unchecked") suprime el warning esperado.
+             * En runtime Hibernate devuelve un objeto que implementa ambas interfaces, así
+             * que funciona correctamente.
+             */
             @SuppressWarnings("unchecked")
             Join<Movimiento, Cliente> cliente;
             if (Long.class != query.getResultType()) {

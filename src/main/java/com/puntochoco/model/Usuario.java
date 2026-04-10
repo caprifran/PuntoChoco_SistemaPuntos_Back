@@ -17,16 +17,15 @@ import java.time.LocalDateTime;
 public class Usuario {
 
     @Id
-    @Schema(description = "ID del usuario (Keycloak sub)", example = "f81d4fae-7dec-11d0-a765-00a0c91e6bf6")
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(nullable = false, unique = true)
     @Schema(description = "Nombre de usuario", example = "admin")
     private String username;
 
-    @Column(nullable = false, unique = true)
-    @Schema(description = "Correo electrónico", example = "juan.perez@example.com")
-    private String email;
+    @Column(nullable = false)
+    private String password;
 
     @Column(nullable = false)
     @Schema(description = "Nombre del usuario", example = "Juan")
@@ -38,9 +37,7 @@ public class Usuario {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Schema(description = "Rol del usuario", example = "SELLER")
-    private Rol rol;
-
-
+    private Rol rol = Rol.USER;
 
     @Column(nullable = false)
     @Schema(description = "Indica si el usuario está activo", example = "true")

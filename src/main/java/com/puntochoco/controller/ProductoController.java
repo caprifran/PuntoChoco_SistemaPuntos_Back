@@ -35,8 +35,8 @@ public class ProductoController {
 
     @Operation(summary = "Obtener un producto por su ID")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Producto encontrado"),
-        @ApiResponse(responseCode = "404", description = "Producto no encontrado")
+            @ApiResponse(responseCode = "200", description = "Producto encontrado"),
+            @ApiResponse(responseCode = "404", description = "Producto no encontrado")
     })
     @GetMapping("/{id}")
     public ResponseEntity<?> getProducto(@PathVariable Long id) {
@@ -49,9 +49,9 @@ public class ProductoController {
 
     @Operation(summary = "Crear un nuevo producto")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Producto creado correctamente"),
-        @ApiResponse(responseCode = "400", description = "Precio inválido o descripción duplicada"),
-        @ApiResponse(responseCode = "500", description = "Error al crear producto")
+            @ApiResponse(responseCode = "200", description = "Producto creado correctamente"),
+            @ApiResponse(responseCode = "400", description = "Precio inválido o descripción duplicada"),
+            @ApiResponse(responseCode = "500", description = "Error al crear producto")
     })
     @PostMapping
     public ResponseEntity<?> createProducto(@RequestBody Producto data) {
@@ -61,15 +61,16 @@ public class ProductoController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error al crear producto"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error al crear producto"));
         }
     }
 
     @Operation(summary = "Actualizar un producto existente")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Producto actualizado correctamente"),
-        @ApiResponse(responseCode = "400", description = "ID inexistente, precio inválido o descripción duplicada"),
-        @ApiResponse(responseCode = "500", description = "Error al modificar el producto")
+            @ApiResponse(responseCode = "200", description = "Producto actualizado correctamente"),
+            @ApiResponse(responseCode = "400", description = "ID inexistente, precio inválido o descripción duplicada"),
+            @ApiResponse(responseCode = "500", description = "Error al modificar el producto")
     })
     @PutMapping("/{id}")
     public ResponseEntity<?> updateProducto(@PathVariable Long id, @RequestBody Producto data) {
@@ -79,14 +80,15 @@ public class ProductoController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error al modificar el producto"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error al modificar el producto"));
         }
     }
 
     @Operation(summary = "Dar de baja un producto (baja lógica)")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Producto eliminado"),
-        @ApiResponse(responseCode = "404", description = "Producto no encontrado")
+            @ApiResponse(responseCode = "200", description = "Producto eliminado"),
+            @ApiResponse(responseCode = "404", description = "Producto no encontrado")
     })
     @PutMapping("/{id}/bajaProducto")
     public ResponseEntity<?> deleteProducto(@PathVariable Long id) {

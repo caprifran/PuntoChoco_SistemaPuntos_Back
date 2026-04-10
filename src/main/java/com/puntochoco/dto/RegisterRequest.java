@@ -20,10 +20,4 @@ public class RegisterRequest {
 
     @Schema(description = "Apellido del usuario", example = "Pérez")
     private String apellido;
-
-    @Schema(description = "Correo electrónico", example = "juan.perez@example.com")
-    private String email;
-
-    @Schema(description = "Rol del usuario", example = "SELLER")
-    private String rol;
 }

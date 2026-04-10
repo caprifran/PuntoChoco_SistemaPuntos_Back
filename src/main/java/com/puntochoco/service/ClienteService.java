@@ -22,8 +22,8 @@ public class ClienteService {
     private final ProductoService productoService;
 
     public ClienteService(ClienteRepository clienteRepository,
-                          MovimientoRepository movimientoRepository,
-                          ProductoService productoService) {
+            MovimientoRepository movimientoRepository,
+            ProductoService productoService) {
         this.clienteRepository = clienteRepository;
         this.movimientoRepository = movimientoRepository;
         this.productoService = productoService;
@@ -47,7 +47,8 @@ public class ClienteService {
 
     public Map<String, Object> obtenerClientePorId(Long id) {
         Optional<Cliente> opt = clienteRepository.findById(id);
-        if (opt.isEmpty()) return null;
+        if (opt.isEmpty())
+            return null;
 
         Cliente cliente = opt.get();
         Long totalPuntos = movimientoRepository.sumPuntosVigentes(id, LocalDateTime.now());
@@ -92,7 +93,8 @@ public class ClienteService {
 
     public boolean eliminarCliente(Long id) {
         Optional<Cliente> opt = clienteRepository.findById(id);
-        if (opt.isEmpty()) return false;
+        if (opt.isEmpty())
+            return false;
 
         Cliente cliente = opt.get();
         cliente.setFechaBaja(LocalDateTime.now());
@@ -152,7 +154,7 @@ public class ClienteService {
         mov.setDetalle(producto.getDescripcion() + " X" + cantidad);
         return movimientoRepository.save(mov);
     }
-    
+
     public List<Map<String, Object>> obtenerMovimientos(
             Long clienteId, String fDesde, String fHasta, String tipo, String clienteDesc, String nroFactura) {
 
@@ -168,8 +170,7 @@ public class ClienteService {
         String clienteDescFiltro = (clienteDesc != null && !clienteDesc.isBlank()) ? clienteDesc : null;
 
         Specification<Movimiento> spec = MovimientoSpecification.conFiltros(
-                clienteId, desde, hasta, tipoFiltro, clienteDescFiltro, nroFactura
-        );
+                clienteId, desde, hasta, tipoFiltro, clienteDescFiltro, nroFactura);
 
         List<Movimiento> movimientos = movimientoRepository.findAll(spec);
 
@@ -222,10 +223,12 @@ public class ClienteService {
 
     public boolean bajaMovimiento(Long id) {
         Optional<Movimiento> opt = movimientoRepository.findById(id);
-        if (opt.isEmpty()) return false;
+        if (opt.isEmpty())
+            return false;
 
         Movimiento mov = opt.get();
-        if (mov.getFechaBaja() != null) return false;
+        if (mov.getFechaBaja() != null)
+            return false;
 
         mov.setFechaBaja(LocalDateTime.now());
         movimientoRepository.save(mov);

@@ -1,16 +1,18 @@
 package com.puntochoco.config;
 
-import com.puntochoco.security.KeycloakRoleConverter;
-import com.puntochoco.security.RateLimitFilter;
+import com.puntochoco.security.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -24,11 +26,11 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private final RateLimitFilter rateLimitFilter;
+    private final JwtAuthFilter jwtAuthFilter;
     private final Environment environment;
 
-    public SecurityConfig(RateLimitFilter rateLimitFilter, Environment environment) {
-        this.rateLimitFilter = rateLimitFilter;
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, Environment environment) {
+        this.jwtAuthFilter = jwtAuthFilter;
         this.environment = environment;
     }
 
@@ -43,8 +45,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> {
-                auth.requestMatchers("/api/health/**").permitAll()
-                    .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll();
+                auth.requestMatchers("/api/auth/**").permitAll()
+                    .requestMatchers("/api/health/**").permitAll();
                 if (isDevelop()) {
                     auth.requestMatchers("/h2-console/**").permitAll();
                 }
@@ -53,25 +55,15 @@ public class SecurityConfig {
                     .requestMatchers("/api/clientes/**").hasAnyRole("ADMIN", "SELLER")
                     .requestMatchers("/api/productos/**").hasAnyRole("ADMIN", "SELLER")
                     .anyRequest().authenticated();
-            })
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
-            );
+            });
 
         if (isDevelop()) {
             http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
         }
 
-        http.addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-
-    @Bean
-    public JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(new KeycloakRoleConverter());
-        return converter;
     }
 
     @Bean
@@ -87,4 +79,13 @@ public class SecurityConfig {
         return source;
     }
 
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 }
