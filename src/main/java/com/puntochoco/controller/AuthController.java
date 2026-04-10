@@ -1,91 +1,50 @@
 package com.puntochoco.controller;
 
-import com.puntochoco.dto.AuthResponse;
-import com.puntochoco.dto.LoginRequest;
-import com.puntochoco.dto.RegisterRequest;
-import com.puntochoco.model.Rol;
-import com.puntochoco.model.Usuario;
-import com.puntochoco.repository.UsuarioRepository;
-import com.puntochoco.security.JwtUtil;
-import org.springframework.http.HttpStatus;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
+/**
+ * El login lo maneja Keycloak externamente.
+ * Este controlador expone información del usuario autenticado
+ * a partir del JWT emitido por el proveedor OAuth2.
+ */
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Autenticación", description = "Información del usuario autenticado (login gestionado por Keycloak)")
+@SecurityRequirement(name = "bearerAuth")
 public class AuthController {
 
-    private final AuthenticationManager authenticationManager;
-    private final UsuarioRepository usuarioRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtUtil jwtUtil;
+    @Operation(summary = "Obtener información del usuario autenticado desde el JWT de Keycloak")
+    @ApiResponse(responseCode = "200", description = "Datos del usuario extraídos del token")
+    @GetMapping("/me")
+    public ResponseEntity<Map<String, Object>> me(@AuthenticationPrincipal Jwt jwt) {
+        String username = jwt.getClaimAsString("preferred_username");
+        String email = jwt.getClaimAsString("email");
+        String nombre = jwt.getClaimAsString("given_name");
+        String apellido = jwt.getClaimAsString("family_name");
 
-    public AuthController(AuthenticationManager authenticationManager,
-                          UsuarioRepository usuarioRepository,
-                          PasswordEncoder passwordEncoder,
-                          JwtUtil jwtUtil) {
-        this.authenticationManager = authenticationManager;
-        this.usuarioRepository = usuarioRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtUtil = jwtUtil;
-    }
+        @SuppressWarnings("unchecked")
+        List<String> roles = jwt.hasClaim("realm_access")
+                ? (List<String>) ((Map<String, Object>) jwt.getClaim("realm_access")).get("roles")
+                : List.of();
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-            );
-        } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Credenciales inválidas"));
-        }
-
-        Usuario usuario = usuarioRepository.findByUsernameAndActivoTrue(request.getUsername())
-                .orElseThrow();
-
-        String token = jwtUtil.generateToken(usuario.getUsername(), usuario.getRol().name());
-
-        return ResponseEntity.ok(new AuthResponse(
-                token,
-                usuario.getUsername(),
-                usuario.getNombre(),
-                usuario.getApellido(),
-                usuario.getRol().name()
-        ));
-    }
-
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
-        if (usuarioRepository.existsByUsername(request.getUsername())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("error", "El nombre de usuario ya existe"));
-        }
-
-        Usuario usuario = new Usuario();
-        usuario.setUsername(request.getUsername());
-        usuario.setPassword(passwordEncoder.encode(request.getPassword()));
-        usuario.setNombre(request.getNombre());
-        usuario.setApellido(request.getApellido());
-        usuario.setRol(Rol.USER);
-        usuario.setActivo(true);
-
-        usuarioRepository.save(usuario);
-
-        String token = jwtUtil.generateToken(usuario.getUsername(), usuario.getRol().name());
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(new AuthResponse(
-                token,
-                usuario.getUsername(),
-                usuario.getNombre(),
-                usuario.getApellido(),
-                usuario.getRol().name()
+        return ResponseEntity.ok(Map.of(
+                "username", username != null ? username : "",
+                "email", email != null ? email : "",
+                "nombre", nombre != null ? nombre : "",
+                "apellido", apellido != null ? apellido : "",
+                "roles", roles
         ));
     }
 }

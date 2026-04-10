@@ -1,19 +1,17 @@
 package com.puntochoco.config;
 
-import com.puntochoco.model.Cliente;
-import com.puntochoco.model.Producto;
-import com.puntochoco.model.Rol;
-import com.puntochoco.model.Usuario;
-import com.puntochoco.model.Movimiento;
+import com.puntochoco.dto.RegisterRequest;
+import com.puntochoco.model.*;
 import com.puntochoco.repository.ClienteRepository;
 import com.puntochoco.repository.MovimientoRepository;
 import com.puntochoco.repository.ProductoRepository;
 import com.puntochoco.repository.UsuarioRepository;
-
+import com.puntochoco.service.KeycloakService;
+import org.keycloak.representations.idm.UserRepresentation;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -24,18 +22,18 @@ public class DataLoader implements CommandLineRunner {
     private final ClienteRepository clienteRepository;
     private final ProductoRepository productoRepository;
     private final MovimientoRepository movimientoRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final KeycloakService keycloakService;
 
     public DataLoader(UsuarioRepository usuarioRepository,
                       ClienteRepository clienteRepository,
                       ProductoRepository productoRepository,
                       MovimientoRepository movimientoRepository,
-                      PasswordEncoder passwordEncoder) {
+                      KeycloakService keycloakService) {
         this.usuarioRepository = usuarioRepository;
         this.clienteRepository = clienteRepository;
         this.productoRepository = productoRepository;
         this.movimientoRepository = movimientoRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.keycloakService = keycloakService;
     }
 
     @Override
@@ -47,34 +45,89 @@ public class DataLoader implements CommandLineRunner {
     }
 
     private void cargarUsuarios() {
-        if (usuarioRepository.count() > 0) return;
+        // 1. Asegurar usuarios semilla (opcional, si no existen en Keycloak los crea)
+        crearOSincronizarUsuario("admin", "admin@puntochoco.com", "Administrador", "Sistema", Rol.ADMIN);
+        crearOSincronizarUsuario("vendedor", "vendedor@puntochoco.com", "Juan", "Pérez", Rol.SELLER);
+        crearOSincronizarUsuario("user", "user@example.com", "María", "García", Rol.USER);
 
-        Usuario admin = new Usuario();
-        admin.setUsername("admin");
-        admin.setPassword(passwordEncoder.encode("admin"));
-        admin.setNombre("Administrador");
-        admin.setApellido("Sistema");
-        admin.setRol(Rol.ADMIN);
-        admin.setActivo(true);
-        usuarioRepository.save(admin);
+        // 2. Sincronizar TODOS los demás usuarios que existan en Keycloak
+        System.out.println("DataLoader: Iniciando sincronización masiva desde Keycloak...");
+        try {
+            List<UserRepresentation> allKeycloakUsers = keycloakService.listarTodosLosUsuarios();
+            for (UserRepresentation uk : allKeycloakUsers) {
+                // Si el usuario no fue procesado arriba (por username), lo procesamos ahora
+                if (!usuarioRepository.existsById(uk.getId())) {
+                    actualizarOLocalizarUsuario(uk);
+                }
+            }
+            System.out.println("DataLoader: Sincronización masiva finalizada.");
+        } catch (Exception e) {
+            System.err.println("DataLoader: Error en sincronización masiva: " + e.getMessage());
+        }
+    }
 
-        Usuario seller = new Usuario();
-        seller.setUsername("vendedor");
-        seller.setPassword(passwordEncoder.encode("vendedor"));
-        seller.setNombre("Juan");
-        seller.setApellido("Pérez");
-        seller.setRol(Rol.SELLER);
-        seller.setActivo(true);
-        usuarioRepository.save(seller);
+    private void actualizarOLocalizarUsuario(UserRepresentation uk) {
+        try {
+            List<String> roles = keycloakService.getRoles(uk.getId());
+            Rol rolLocal = mapearRol(roles);
 
-        Usuario user = new Usuario();
-        user.setUsername("user");
-        user.setPassword(passwordEncoder.encode("user"));
-        user.setNombre("María");
-        user.setApellido("García");
-        user.setRol(Rol.USER);
-        user.setActivo(true);
-        usuarioRepository.save(user);
+            Usuario u = new Usuario();
+            u.setId(uk.getId());
+            u.setUsername(uk.getUsername());
+            u.setEmail(uk.getEmail());
+            u.setNombre(uk.getFirstName() != null ? uk.getFirstName() : uk.getUsername());
+            u.setApellido(uk.getLastName() != null ? uk.getLastName() : "");
+            u.setRol(rolLocal);
+            u.setActivo(uk.isEnabled());
+            usuarioRepository.save(u);
+            System.out.println("DataLoader: Usuario '" + uk.getUsername() + "' sincronizado desde Keycloak.");
+        } catch (Exception e) {
+            System.err.println("DataLoader: Error localizando usuario '" + uk.getUsername() + "': " + e.getMessage());
+        }
+    }
+
+    private Rol mapearRol(List<String> roles) {
+        if (roles.contains("ADMIN")) return Rol.ADMIN;
+        if (roles.contains("SELLER")) return Rol.SELLER;
+        return Rol.USER;
+    }
+
+    private void crearOSincronizarUsuario(String username, String email, String nombre, String apellido, Rol rol) {
+        try {
+            String keycloakId = keycloakService.getUserIdByUsername(username);
+
+            if (keycloakId == null) {
+                // No existe en Keycloak, lo creamos
+                RegisterRequest reg = new RegisterRequest();
+                reg.setUsername(username);
+                reg.setEmail(email);
+                reg.setNombre(nombre);
+                reg.setApellido(apellido);
+                reg.setPassword(username); // Usamos el username como password por defecto
+                reg.setRol(rol.name());
+                
+                keycloakId = keycloakService.crearUsuario(reg);
+                System.out.println("DataLoader: Usuario '" + username + "' creado en Keycloak.");
+            } else {
+                System.out.println("DataLoader: Usuario '" + username + "' ya existe en Keycloak (ID: " + keycloakId + "). Sincronizando...");
+                // Aseguramos que tenga el rol correcto en Keycloak también
+                keycloakService.asignarRol(keycloakId, rol.name());
+            }
+
+            // Guardar en base de datos local
+            Usuario u = new Usuario();
+            u.setId(keycloakId);
+            u.setUsername(username);
+            u.setEmail(email);
+            u.setNombre(nombre);
+            u.setApellido(apellido);
+            u.setRol(rol);
+            u.setActivo(true);
+            usuarioRepository.save(u);
+
+        } catch (Exception e) {
+            System.err.println("DataLoader: Error procesando usuario '" + username + "': " + e.getMessage());
+        }
     }
 
     private void cargarClientes() {
